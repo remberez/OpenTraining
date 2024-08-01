@@ -41,13 +41,11 @@ class UserViewSet(ModelViewSet):
         context['request'] = self.request
         return context
 
-    def perform_update(self, serializer):
+    def partial_update(self, request, *args, **kwargs):
         user = self.get_object()
-        print(user, self.request.user)
         if user != self.request.user:
             raise PermissionDenied("У вас нет прав для изменения этого аккаунта.")
-        serializer.save()
-
+        return super().partial_update(request, *args, **kwargs)
 
 @extend_schema_view(
     change_password=extend_schema(

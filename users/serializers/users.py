@@ -85,6 +85,7 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 
     def validate_old_password(self, value):
         instance = self.instance
+        print(value)
         if not instance.check_password(value):
             raise ParseError('Неверный пароль')
         return value
