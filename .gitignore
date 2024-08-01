@@ -168,5 +168,5 @@ media/
 /media/
 */media
 
-/*/migrations/
-/.idea/
+**/migrations/
+**/.idea/

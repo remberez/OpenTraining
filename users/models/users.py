@@ -1,6 +1,10 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
 from .managers import CustomUserManager
+from .profiles import Learner
 
 
 class User(AbstractUser):
@@ -24,3 +28,12 @@ class User(AbstractUser):
 
     def __str__(self):
         return f'{self.username}'
+
+
+@receiver(post_save, sender=User)
+def post_save_user(sender, instance, created, **kwargs):
+    if not hasattr(instance, 'learner_profile'):
+        Learner.objects.create(
+            user=instance,
+            name=instance.username,
+        )

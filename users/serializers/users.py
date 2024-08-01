@@ -8,7 +8,6 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    email = serializers.EmailField(allow_blank=True)
 
     class Meta:
         model = User
@@ -60,6 +59,17 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         instance = User.objects.create_user(**validated_data)
         return instance
+
+    def update(self, instance, validated_data):
+        forbidden_fields = (
+            'password',
+        )
+
+        for field in validated_data.keys():
+            print(field)
+            if field in forbidden_fields:
+                raise ParseError(f'Запрещено менять поле {field}')
+        return super().update(instance, validated_data)
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):

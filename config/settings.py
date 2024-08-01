@@ -38,6 +38,7 @@ INSTALLED_APPS += [
     'api',
     'users',
     'common',
+    'coaching',
 ]
 
 # After apps
@@ -233,3 +234,6 @@ SIMPLE_JWT = {
 ##########################################################################################
 
 AUTH_USER_MODEL = 'users.User'
+
+MEDIA_ROOT = 'media'
+MEDIA_URL = 'media/'

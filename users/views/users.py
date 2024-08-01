@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from users.serializers import users
@@ -22,11 +23,15 @@ User = get_user_model()
         summary='Список пользователей',
         tags=['Информация'],
     ),
+    partial_update=extend_schema(
+        summary="Изменение данных пользователя",
+        tags=['Управление аккаунтом'],
+    )
 )
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = users.UserSerializer
-    http_method_names = ('get', 'post')
+    http_method_names = ('get', 'post', 'patch')
 
     def get_serializer_context(self):
         """
@@ -36,6 +41,13 @@ class UserViewSet(ModelViewSet):
         context['request'] = self.request
         return context
 
+    def perform_update(self, serializer):
+        user = self.get_object()
+        print(user, self.request.user)
+        if user != self.request.user:
+            raise PermissionDenied("У вас нет прав для изменения этого аккаунта.")
+        serializer.save()
+
 
 @extend_schema_view(
     change_password=extend_schema(
@@ -43,7 +55,7 @@ class UserViewSet(ModelViewSet):
         tags=['Управление аккаунтом'],
     )
 )
-class AccountManagement(GenericViewSet):
+class ChangePasswordViewSet(GenericViewSet):
     queryset = User.objects.all()
     serializer_class = users.ChangePasswordSerializer
 
