@@ -1,21 +1,34 @@
-import pdb
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
-
+from users.constants.positions import TEACHER_CODE
 from users.serializers.profiles import TeacherProfileSerializer, LearnerProfileSerializer
+from common.serializers.mixins import ValidateMixin
 
 User = get_user_model()
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class UserValidate(ValidateMixin):
+
+    def _validate_email(self, value):
+        if value:
+            email = value.lower()
+            return self.exists_validate(email, 'email')
+
+    def _validate_discord_id(self, value):
+        return self.exists_validate(value, 'discord_id')
+
+    def _validate_username(self, value):
+        return self.exists_validate(value, 'username')
+
+
+class UserRegistrationSerializer(UserValidate, serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    email = serializers.EmailField()
-    discord_id = serializers.CharField()
-    username = serializers.CharField()
+    email = serializers.EmailField(required=False)
+    discord_id = serializers.CharField(required=False)
+    username = serializers.CharField(required=False)
 
     validation_fields = (
         'password',
@@ -35,45 +48,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'password',
         )
 
-    def exists_validate(self, value, field):
-        if value and User.objects.filter(**{field: value}).exists():
-            raise ParseError(field + ' уже используется')
-        return value
-
-    def _validate_email(self, value):
-        email = value.lower()
-        return self.exists_validate(email, 'email')
-
     def _validate_password(self, value):
         validate_password(value)
         return value
-
-    def _validate_discord_id(self, value):
-        return self.exists_validate(value, 'discord_id')
-
-    def _validate_username(self, value):
-        return self.exists_validate(value, 'username')
-
-    def validate(self, attrs):
-        """
-        Сделано для того, что бы возвращать сразу все
-        ошибки валидации полей, а не только ошибку первого поля,
-        которое не прошло валидацию.
-        """
-        validation_errors = []
-        for field in self.validation_fields:
-            validator = '_validate_' + field
-            if hasattr(self, validator):
-                try:
-                    value = attrs.get(field)
-                    getattr(self, validator)(value)
-                except ParseError as e:
-                    validation_errors.append(e)
-                except ValidationError as e:
-                    validation_errors.append(e)
-        if validation_errors:
-            raise serializers.ValidationError(validation_errors)
-        return attrs
 
     def create(self, validated_data):
         instance = User.objects.create_user(**validated_data)
@@ -117,15 +94,19 @@ class UserListAndDetail(serializers.ModelSerializer):
                     fields_to_send[key] = value
             return fields_to_send
 
-    def to_representation(self, instance):
+    def define_profile(self, instance):
+        position = instance.position
+        if position:
+            if position.code == TEACHER_CODE:
+                profile = TeacherProfileSerializer(instance.teacher_profile).data
+            else:
+                profile = LearnerProfileSerializer(instance.learner_profile).data
+            return profile
 
+    def to_representation(self, instance):
         fields = super().to_representation(instance)
         fields = self.check_permissions(instance, fields)
-
-        if instance.is_teacher:
-            fields['profile'] = TeacherProfileSerializer(instance.teacher_profile).data
-        else:
-            fields['profile'] = LearnerProfileSerializer(instance.learner_profile).data
+        fields['profile'] = self.define_profile(instance)
         return fields
 
 
@@ -142,7 +123,6 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 
     def validate_old_password(self, value):
         instance = self.instance
-        print(value)
         if not instance.check_password(value):
             raise ParseError('Неверный пароль')
         return value
@@ -160,7 +140,17 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         return instance
 
 
-class PartialUpdateUserSerializer(serializers.ModelSerializer):
+class PartialUpdateUserSerializer(UserValidate, serializers.ModelSerializer):
+    email = serializers.EmailField(required=False)
+    discord_id = serializers.CharField(required=False)
+    username = serializers.CharField(required=False)
+
+    validation_fields = (
+        'email',
+        'discord_id',
+        'username',
+    )
+
     class Meta:
         model = User
         fields = (

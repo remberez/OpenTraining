@@ -8,4 +8,4 @@ class IsUserAccount(BasePermission):
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_admin
+        return request.user.position.code == 'admin'

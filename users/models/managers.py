@@ -3,6 +3,8 @@ import pdb
 from django.contrib.auth.base_user import BaseUserManager
 from rest_framework.exceptions import ParseError
 
+from users.models.position import Position
+
 
 class CustomUserManager(BaseUserManager):
     use_in_migrations = True
@@ -37,6 +39,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('position', Position.objects.filter(code='admin').first())
         return self._create_user(email, discord_id, username, password, **extra_fields)
 
     def create_user(
@@ -45,4 +48,6 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', False)
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('position', Position.objects.filter(code='learner').first())
+
         return self._create_user(email, discord_id, username, password, **extra_fields)

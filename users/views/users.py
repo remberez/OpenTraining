@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from common.permissions.user import IsUserAccount, IsAdmin
+from common.views.pagination import BasePagination
 from users.serializers.users import UserRegistrationSerializer, UserListAndDetail, ChangePasswordSerializer, \
     PartialUpdateUserSerializer
 from common.views.mixins import RUDViewSet
@@ -48,13 +49,17 @@ class UserRegistration(RUDViewSet):
         'change_password': ChangePasswordSerializer,
         'partial_update': PartialUpdateUserSerializer,
     }
+
     queryset = User.objects.all()
     http_method_names = ('get', 'post', 'delete', 'patch')
+
     multi_permission_classes = {
         'registration': (AllowAny,),
         'destroy': (IsUserAccount | IsAdmin,),
         'partial_update': (IsUserAccount | IsAdmin,),
     }
+
+    pagination_class = BasePagination
 
     @action(methods=['post'], detail=False)
     def registration(self, request):
@@ -71,3 +76,10 @@ class UserRegistration(RUDViewSet):
         password_serializer.is_valid(raise_exception=True)
         password_serializer.save()
         return Response(status=HTTP_204_NO_CONTENT)
+
+    def get_queryset(self):
+        return User.objects.select_related(
+            'learner_profile'
+        ).select_related(
+            'teacher_profile'
+        )

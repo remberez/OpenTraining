@@ -1,7 +1,7 @@
 from django.urls import path, include
 from .spectacular.urls import urlpatterns as doc_urls
 from users.urls import urlpatterns as user_urls
-
+from coaching.urls import urlpatterns as coaching_urls
 
 app_name = 'api'
 urlpatterns = [
@@ -10,3 +10,4 @@ urlpatterns = [
 
 urlpatterns += doc_urls
 urlpatterns += user_urls
+urlpatterns += coaching_urls

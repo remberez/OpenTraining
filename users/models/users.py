@@ -19,8 +19,12 @@ class User(AbstractUser):
         max_length=25, blank=True, null=True,
     )
     is_public = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)
-    is_teacher = models.BooleanField(default=False)
+    position = models.ForeignKey(
+        'Position', verbose_name='Должность',
+        related_name='users', on_delete=models.RESTRICT,
+        null=True,
+    )
+
     objects = CustomUserManager()
 
     class Meta:

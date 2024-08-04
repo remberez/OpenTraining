@@ -1,23 +1,24 @@
 from users.models.profiles import *
 from rest_framework import serializers
-from coaching.serializers.games import GameShortSerializer, CoachingShortSerializer
+from coaching.serializers.games import GameShortSerializer
+from coaching.serializers.coaching import CoachingShortSerializer
 
 
 class TeacherProfileSerializer(serializers.ModelSerializer):
-    games = GameShortSerializer(many=True)
+    games_taught = GameShortSerializer(many=True)
 
     class Meta:
         model = Teacher
         fields = (
-            'games',
+            'games_taught',
         )
 
 
 class LearnerProfileSerializer(serializers.ModelSerializer):
-    games = CoachingShortSerializer(many=True)
+    learning_games = CoachingShortSerializer(many=True)
 
     class Meta:
         model = Learner
         fields = (
-            'games',
+            'learning_games',
         )

@@ -37,7 +37,7 @@ class Learner(BaseProfile):
         'users.User', verbose_name='Пользователь',
         related_name='learner_profile', on_delete=models.CASCADE
     )
-    games = models.ManyToManyField(
+    learning_games = models.ManyToManyField(
         'coaching.TeacherGame', verbose_name='Игры ученика',
         related_name='learner_games', through='coaching.Coaching',
     )
@@ -48,7 +48,7 @@ class Teacher(BaseProfile):
         'users.User', verbose_name='Пользователь',
         related_name='teacher_profile', on_delete=models.CASCADE
     )
-    games = models.ManyToManyField(
+    games_taught = models.ManyToManyField(
         'coaching.Game', verbose_name='Преподаваемые игры',
         related_name='game_teachers', through='coaching.TeacherGame',
     )

@@ -9,7 +9,7 @@ class Game(models.Model):
         verbose_name='Описание игры',
     )
     image = models.ImageField(
-        upload_to='games/%Y/%m/%d/',
+        upload_to='games/%Y/%m/%d/', null=True, blank=True,
     )
 
     class Meta:

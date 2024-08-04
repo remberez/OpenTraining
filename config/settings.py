@@ -161,8 +161,8 @@ REST_FRAMEWORK = {
 ############################
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Call Helper',
-    'DESCRIPTION': 'Call Helper',
+    'TITLE': 'OpenTraining',
+    'DESCRIPTION': 'OpenTraining',
     'VERSION': '1.0.0',
 
     'SERVE_PERMISSIONS': [

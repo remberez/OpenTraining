@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
+from users.models.position import Position
 from users.models.profiles import Teacher, Learner
 from users.models.users import User
 
@@ -16,11 +17,16 @@ class LearnerProfileAdmin(admin.TabularInline):
     extra = 0
 
 
+class PositionAdmin(admin.TabularInline):
+    model = Position
+    extra = 0
+
+
 @admin.register(User)
 class UserAdmin(UserAdmin):
     change_user_password_template = None
     fieldsets = (
-        (None, {'fields': ('username', 'discord_id', 'email', 'is_public', 'is_admin', 'is_teacher')}),
+        (None, {'fields': ('username', 'discord_id', 'email', 'is_public', 'position')}),
         (_('Личная информация'),
          {'fields': ('first_name', 'last_name',)}),
         (_('Permissions'), {
@@ -42,3 +48,8 @@ class UserAdmin(UserAdmin):
     filter_horizontal = ('groups', 'user_permissions',)
     readonly_fields = ('last_login',)
     inlines = (TeacherProfileAdmin, LearnerProfileAdmin)
+
+
+@admin.register(Position)
+class PositionAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'name')
