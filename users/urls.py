@@ -3,7 +3,8 @@ from .views import users
 from rest_framework import routers
 
 router = routers.DefaultRouter()
-router.register('users', users.UserViewSet, basename='users')
-router.register('account-management', users.ChangePasswordViewSet, basename='account')
+router.register('users', users.UserRegistration, basename='users')
+urlpatterns = [
+]
 
-urlpatterns = router.urls
+urlpatterns += router.urls

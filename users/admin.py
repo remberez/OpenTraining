@@ -20,7 +20,7 @@ class LearnerProfileAdmin(admin.TabularInline):
 class UserAdmin(UserAdmin):
     change_user_password_template = None
     fieldsets = (
-        (None, {'fields': ('username', 'discord_id', 'email', 'is_public')}),
+        (None, {'fields': ('username', 'discord_id', 'email', 'is_public', 'is_admin', 'is_teacher')}),
         (_('Личная информация'),
          {'fields': ('first_name', 'last_name',)}),
         (_('Permissions'), {

@@ -37,6 +37,10 @@ class Learner(BaseProfile):
         'users.User', verbose_name='Пользователь',
         related_name='learner_profile', on_delete=models.CASCADE
     )
+    games = models.ManyToManyField(
+        'coaching.TeacherGame', verbose_name='Игры ученика',
+        related_name='learner_games', through='coaching.Coaching',
+    )
 
 
 class Teacher(BaseProfile):

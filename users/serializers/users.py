@@ -1,13 +1,28 @@
+import pdb
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
+
+from users.serializers.profiles import TeacherProfileSerializer, LearnerProfileSerializer
 
 User = get_user_model()
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    email = serializers.EmailField()
+    discord_id = serializers.CharField()
+    username = serializers.CharField()
+
+    validation_fields = (
+        'password',
+        'email',
+        'discord_id',
+        'username',
+    )
 
     class Meta:
         model = User
@@ -18,58 +33,100 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'password',
-            'is_public',
         )
 
-    def to_representation(self, instance):
-        """
-        Если аккаунт публичный или запрос делает владелец аккаунта,
-        то возвращаем все поля. Если аккаунт скрыт, то возвращаем
-        только разрешённые поля.
-        """
-        representation = super().to_representation(instance)
-        request = self.context.get('request')
-        if instance.is_public or request.user == instance:
-            return representation
-        else:
-            allowed_fields = (
-                'username',
-            )
-            fields_to_send = {}
-            for key, value in representation.items():
-                if key in allowed_fields:
-                    fields_to_send[key] = value
-            return fields_to_send
+    def exists_validate(self, value, field):
+        if value and User.objects.filter(**{field: value}).exists():
+            raise ParseError(field + ' уже используется')
+        return value
 
-    def validate_email(self, value):
+    def _validate_email(self, value):
         email = value.lower()
-        if email and User.objects.filter(email=email).exists():
-            raise ParseError('Email уже используется')
-        return email
+        return self.exists_validate(email, 'email')
 
-    def validate_password(self, value):
+    def _validate_password(self, value):
         validate_password(value)
         return value
 
-    def validate_discord_id(self, value):
-        if value and User.objects.filter(discord_id=value).exists():
-            raise ParseError('Данный Discord ID уже используется.')
-        return value
+    def _validate_discord_id(self, value):
+        return self.exists_validate(value, 'discord_id')
+
+    def _validate_username(self, value):
+        return self.exists_validate(value, 'username')
+
+    def validate(self, attrs):
+        """
+        Сделано для того, что бы возвращать сразу все
+        ошибки валидации полей, а не только ошибку первого поля,
+        которое не прошло валидацию.
+        """
+        validation_errors = []
+        for field in self.validation_fields:
+            validator = '_validate_' + field
+            if hasattr(self, validator):
+                try:
+                    value = attrs.get(field)
+                    getattr(self, validator)(value)
+                except ParseError as e:
+                    validation_errors.append(e)
+                except ValidationError as e:
+                    validation_errors.append(e)
+        if validation_errors:
+            raise serializers.ValidationError(validation_errors)
+        return attrs
 
     def create(self, validated_data):
         instance = User.objects.create_user(**validated_data)
         return instance
 
-    def update(self, instance, validated_data):
-        forbidden_fields = (
+
+class UserListAndDetail(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    allowed_fields = (
+        'pk',
+        'username',
+        'is_public',
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            'pk',
+            'username',
+            'discord_id',
+            'email',
+            'first_name',
+            'last_name',
             'password',
+            'is_public',
         )
 
-        for field in validated_data.keys():
-            print(field)
-            if field in forbidden_fields:
-                raise ParseError(f'Запрещено менять поле {field}')
-        return super().update(instance, validated_data)
+    def check_permissions(self, instance, fields):
+        """
+        Если аккаунт публичный или запрос делает владелец аккаунта,
+        то возвращаем все поля. Если аккаунт скрыт, то возвращаем
+        только разрешённые поля.
+        """
+        request = self.context.get('request')
+        if instance.is_public or request.user == instance:
+            return fields
+        else:
+            fields_to_send = {}
+            for key, value in fields.items():
+                if key in self.allowed_fields:
+                    fields_to_send[key] = value
+            return fields_to_send
+
+    def to_representation(self, instance):
+
+        fields = super().to_representation(instance)
+        fields = self.check_permissions(instance, fields)
+
+        if instance.is_teacher:
+            fields['profile'] = TeacherProfileSerializer(instance.teacher_profile).data
+        else:
+            fields['profile'] = LearnerProfileSerializer(instance.learner_profile).data
+        return fields
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
@@ -101,3 +158,16 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
             instance.set_password(new_password)
             instance.save()
         return instance
+
+
+class PartialUpdateUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'discord_id',
+            'email',
+            'first_name',
+            'last_name',
+            'is_public',
+        )

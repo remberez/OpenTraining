@@ -1,66 +1,70 @@
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
-from users.serializers import users
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from common.permissions.user import IsUserAccount, IsAdmin
+from users.serializers.users import UserRegistrationSerializer, UserListAndDetail, ChangePasswordSerializer, \
+    PartialUpdateUserSerializer
+from common.views.mixins import RUDViewSet
+from rest_framework.status import HTTP_201_CREATED
 
 User = get_user_model()
 
 
 @extend_schema_view(
-    create=extend_schema(
-        summary='Регистрация пользователя',
-        tags=['Регистрация'],
-    ),
-    retrieve=extend_schema(
-        summary='Информация о пользователе',
-        tags=['Информация'],
+    registration=extend_schema(
+        summary='Регистрация',
+        tags=['Пользователи']
     ),
     list=extend_schema(
-        summary='Список пользователей',
-        tags=['Информация'],
+        summary='Получить данные о пользователях',
+        tags=['Пользователи'],
+    ),
+    retrieve=extend_schema(
+        summary='Получить данные о пользователе',
+        tags=['Пользователи'],
     ),
     partial_update=extend_schema(
-        summary="Изменение данных пользователя",
+        summary='Изменить данные о пользователе',
         tags=['Управление аккаунтом'],
-    )
-)
-class UserViewSet(ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = users.UserSerializer
-    http_method_names = ('get', 'post', 'patch')
-
-    def get_serializer_context(self):
-        """
-        Передача запроса в UserSerializer
-        """
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
-
-    def partial_update(self, request, *args, **kwargs):
-        user = self.get_object()
-        if user != self.request.user:
-            raise PermissionDenied("У вас нет прав для изменения этого аккаунта.")
-        return super().partial_update(request, *args, **kwargs)
-
-@extend_schema_view(
+    ),
+    destroy=extend_schema(
+        summary='Удалить пользователя',
+        tags=['Управление аккаунтом'],
+    ),
     change_password=extend_schema(
         summary='Смена пароля',
         tags=['Управление аккаунтом'],
     )
 )
-class ChangePasswordViewSet(GenericViewSet):
+class UserRegistration(RUDViewSet):
+    multi_serializer_class = {
+        'registration': UserRegistrationSerializer,
+        'list': UserListAndDetail,
+        'retrieve': UserListAndDetail,
+        'destroy': UserListAndDetail,
+        'change_password': ChangePasswordSerializer,
+        'partial_update': PartialUpdateUserSerializer,
+    }
     queryset = User.objects.all()
-    serializer_class = users.ChangePasswordSerializer
+    http_method_names = ('get', 'post', 'delete', 'patch')
+    multi_permission_classes = {
+        'registration': (AllowAny,),
+        'destroy': (IsUserAccount | IsAdmin,),
+        'partial_update': (IsUserAccount | IsAdmin,),
+    }
 
-    @action(
-        methods=['post'],
-        detail=False,
-    )
+    @action(methods=['post'], detail=False)
+    def registration(self, request):
+        serializer = self.get_serializer_class()
+        user_serializer = serializer(data=request.data)
+        user_serializer.is_valid(raise_exception=True)
+        user_serializer.save()
+        return Response(user_serializer.data, status=HTTP_201_CREATED)
+
+    @action(methods=['patch'], detail=False)
     def change_password(self, request):
         serializer = self.get_serializer_class()
         password_serializer = serializer(instance=request.user, data=request.data)

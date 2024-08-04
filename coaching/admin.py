@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from coaching.models.coaching import TeacherGame
+from coaching.models.coaching import TeacherGame, Coaching
 from coaching.models.games import Game
 
 
@@ -12,3 +12,8 @@ class GameAdmin(admin.ModelAdmin):
 @admin.register(TeacherGame)
 class TeacherGameAdmin(admin.ModelAdmin):
     list_display = ('id', 'teacher', 'game')
+
+
+@admin.register(Coaching)
+class CoachingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'teacher', 'learner')
