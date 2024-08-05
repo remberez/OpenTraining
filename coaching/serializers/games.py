@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
-from coaching.models.games import Game
+from coaching.models.games import Game, GameGenre
 from common.serializers.mixins import ValidateMixin
 
 
@@ -8,11 +8,6 @@ class ValidateGameMixin(ValidateMixin):
     validation_fields = (
         'name',
     )
-
-    def exists_validate(self, value, field):
-        if value and Game.objects.filter(**{field: value}).exists():
-            raise ParseError(field + ' уже используется')
-        return value
 
     def _validate_name(self, value):
         return self.exists_validate(value, 'name')
@@ -30,6 +25,7 @@ class GameShortSerializer(serializers.ModelSerializer):
 class GameListAndRetrieveSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False)
     count_teachers = serializers.IntegerField(default=None)
+    genre = serializers.CharField()
 
     class Meta:
         model = Game
@@ -38,6 +34,7 @@ class GameListAndRetrieveSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'image',
+            'genre',
             'count_teachers'
         )
 
@@ -50,6 +47,7 @@ class CreateGameSerializer(ValidateGameMixin, serializers.ModelSerializer):
             'name',
             'description',
             'image',
+            'genre'
         )
 
 
@@ -87,3 +85,36 @@ class GameUpdateSerializer(ValidateGameMixin, serializers.ModelSerializer):
 
         attrs = super().validate(attrs)
         return attrs
+
+
+class GameGenreRetrieveListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameGenre
+        fields = (
+            'pk',
+            'name',
+        )
+
+
+class GameGenreDestroySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameGenre
+        fields = (
+            'pk',
+        )
+
+
+class GameGenreUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameGenre
+        fields = (
+            'name',
+        )
+
+
+class GameGenreCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameGenre
+        fields = (
+            'name',
+        )

@@ -1,0 +1,1 @@
+WAITING_STATUS_CODE = 'waiting'

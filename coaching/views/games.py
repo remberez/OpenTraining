@@ -1,21 +1,30 @@
 from django.db.models import Count
-from drf_spectacular.utils import extend_schema_view
+from drf_spectacular.utils import extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema
-from coaching.models.games import Game
+from coaching.backends import CustomSearchFilter
+from coaching.models.games import Game, GameGenre
 from common.permissions.user import IsAdmin
 from common.views.mixins import CRUDViewSet
-from coaching.serializers.games import GameListAndRetrieveSerializer, ShortInfoGameSerializer, CreateGameSerializer, \
-    DeleteGameSerializer, GameUpdateSerializer
+from coaching.serializers.games import *
 from common.views.pagination import BasePagination
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 @extend_schema_view(
     list=extend_schema(
         summary='Все игры',
-        tags=['Игры']
+        tags=['Игры'],
+        parameters=[
+            OpenApiParameter(
+                name='genre',
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description='Фильтрация игр по жанру',
+            ),
+        ],
     ),
     retrieve=extend_schema(
         summary='Игра',
@@ -62,8 +71,9 @@ class GameView(CRUDViewSet):
     pagination_class = BasePagination
 
     filter_backends = (
-        SearchFilter,
         OrderingFilter,
+        DjangoFilterBackend,
+        CustomSearchFilter,
     )
 
     search_fields = ('name', 'description',)
@@ -82,3 +92,48 @@ class GameView(CRUDViewSet):
                         'teachers', distinct=True,
                     )
                 )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary='Список жанров',
+        tags=['Жанры'],
+    ),
+    retrieve=extend_schema(
+        summary='Жанр детально',
+        tags=['Жанры'],
+    ),
+    partial_update=extend_schema(
+        summary='Обновить жанр',
+        tags=['Жанры'],
+    ),
+    destroy=extend_schema(
+        summary='Удалить жанр',
+        tags=['Жанры'],
+    ),
+    create=extend_schema(
+        summary='Добавить жанр',
+        tags=['Жанры'],
+    ),
+
+)
+class GameGenreView(CRUDViewSet):
+    multi_serializer_class = {
+        'list': GameGenreRetrieveListSerializer,
+        'retrieve': GameGenreRetrieveListSerializer,
+        'create': GameGenreCreateSerializer,
+        'partial_update': GameGenreUpdateSerializer,
+        'destroy': GameGenreDestroySerializer,
+    }
+
+    multi_permission_classes = {
+        'retrieve': [AllowAny],
+        'list': [AllowAny],
+        'destroy': [IsAdmin],
+        'partial_update': [IsAdmin],
+        'create': [IsAdmin],
+    }
+
+    queryset = GameGenre.objects.all()
+    http_method_names = ('get', 'post', 'patch', 'delete')
+    pagination_class = BasePagination
