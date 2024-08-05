@@ -1,1 +1,4 @@
 WAITING_STATUS_CODE = 'waiting'
+PROCESSING_STATUS_CODE = 'processing'
+APPROVED_STATUS_CODE = 'approved'
+ACCEPTED_STATUS_CODE = 'accepted'

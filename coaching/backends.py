@@ -1,6 +1,6 @@
 from rest_framework.filters import SearchFilter, BaseFilterBackend
 from coaching.models.applications import Application
-from common.permissions.user import IsAdmin
+from coaching.permissions import CanManageApplications
 
 
 class CustomSearchFilter(SearchFilter):
@@ -17,7 +17,7 @@ class CustomSearchFilter(SearchFilter):
 
 class ApplicationFilter(BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
-        has_permission = IsAdmin().has_permission(request, view)
+        has_permission = CanManageApplications().has_permission(request, view)
         if not has_permission:
             return Application.objects.filter(
                 sender=request.user,

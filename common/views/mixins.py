@@ -2,8 +2,6 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, \
                                   DestroyModelMixin
 
-from common.constants import roles
-
 
 class ExtendedView:
     multi_permission_classes = None
@@ -56,4 +54,10 @@ class CRUDViewSet(ExtendedGenericViewSet, CreateModelMixin,
 class RUDViewSet(ExtendedGenericViewSet,
                  ListModelMixin, RetrieveModelMixin,
                  UpdateModelMixin, DestroyModelMixin):
+    pass
+
+
+class CRDViewSet(ExtendedGenericViewSet, CreateModelMixin,
+                 ListModelMixin, RetrieveModelMixin,
+                 DestroyModelMixin):
     pass

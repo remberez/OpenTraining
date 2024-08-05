@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from coaching.models.applications import Status, Application
 
 
@@ -36,7 +35,7 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ('sender', 'status')
 
 
-class ApplicationListSerializer(serializers.ModelSerializer):
+class ApplicationRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = (
@@ -52,3 +51,32 @@ class ApplicationListSerializer(serializers.ModelSerializer):
             'game',
             'rating',
         )
+
+
+class ApplicationListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = (
+            'id',
+            'full_name',
+            'game',
+            'status',
+            'created_at',
+        )
+
+
+class ApplicationDestroySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = (
+            'id',
+        )
+
+
+class ApplicationChangeStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = (
+            'status',
+        )
+        write_only_fields = ('status',)
