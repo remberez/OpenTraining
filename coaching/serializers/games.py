@@ -29,6 +29,7 @@ class GameShortSerializer(serializers.ModelSerializer):
 
 class GameListAndRetrieveSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False)
+    count_teachers = serializers.IntegerField(default=None)
 
     class Meta:
         model = Game
@@ -37,6 +38,7 @@ class GameListAndRetrieveSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'image',
+            'count_teachers'
         )
 
 
@@ -76,7 +78,7 @@ class GameUpdateSerializer(ValidateGameMixin, serializers.ModelSerializer):
         fields = (
             'name',
             'description',
-            'image'
+            'image',
         )
 
     def validate(self, attrs):
