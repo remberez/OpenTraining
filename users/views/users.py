@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Case, When
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -6,10 +7,14 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from common.permissions.user import IsUserAccount, IsAdmin
 from common.views.pagination import BasePagination
+from users.filters import UserFilter
+from users.constants.positions import TEACHER_CODE
 from users.serializers.users import UserRegistrationSerializer, UserListAndDetail, ChangePasswordSerializer, \
     PartialUpdateUserSerializer
 from common.views.mixins import RUDViewSet
 from rest_framework.status import HTTP_201_CREATED
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 User = get_user_model()
 
@@ -50,6 +55,17 @@ class UserRegistration(RUDViewSet):
         'partial_update': PartialUpdateUserSerializer,
     }
 
+    filter_backends = (
+        SearchFilter,
+        OrderingFilter,
+        DjangoFilterBackend,
+    )
+    filterset_class = UserFilter
+
+    search_fields = ('username',)
+    ordering_fields = ('username', 'pk')
+    ordering = ('username',)
+
     queryset = User.objects.all()
     http_method_names = ('get', 'post', 'delete', 'patch')
 
@@ -82,4 +98,8 @@ class UserRegistration(RUDViewSet):
             'learner_profile'
         ).select_related(
             'teacher_profile'
+        ).annotate(
+            is_teacher=Case(
+                When(position=TEACHER_CODE, then=True), default=False,
+            )
         )
