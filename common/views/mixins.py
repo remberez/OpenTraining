@@ -61,3 +61,17 @@ class CRDViewSet(ExtendedGenericViewSet, CreateModelMixin,
                  ListModelMixin, RetrieveModelMixin,
                  DestroyModelMixin):
     pass
+
+
+class UDViewSet(ExtendedGenericViewSet, DestroyModelMixin,
+                UpdateModelMixin):
+    pass
+
+
+class CRViewSet(ExtendedGenericViewSet, CreateModelMixin,
+                ListModelMixin, RetrieveModelMixin):
+    pass
+
+
+class DestroyViewSet(ExtendedGenericViewSet, DestroyModelMixin):
+    pass
