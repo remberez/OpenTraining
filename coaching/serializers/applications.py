@@ -99,3 +99,13 @@ class ApplicationChangeStatusSerializer(serializers.ModelSerializer):
             'status',
         )
         write_only_fields = ('status',)
+
+
+class TakeApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = (
+            'status',
+            'manager',
+            'accepted_at',
+        )

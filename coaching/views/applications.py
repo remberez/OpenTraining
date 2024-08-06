@@ -1,6 +1,8 @@
+import datetime
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.status import HTTP_403_FORBIDDEN, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST
+from rest_framework.status import HTTP_403_FORBIDDEN, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_200_OK, \
+    HTTP_418_IM_A_TEAPOT
 from coaching.backends import ApplicationFilter
 from coaching.models.applications import Application, Status
 from coaching.permissions import CanManageApplications
@@ -59,6 +61,7 @@ class ApplicationView(CRViewSet):
         OrderingFilter,
         SearchFilter,
     ]
+
     search_fields = ('full_name',)
     ordering_fields = ('full_name', 'created_at', 'approved_at', 'status')
     ordering = ('created_at',)
@@ -109,16 +112,16 @@ class StatusView(CRUDViewSet):
     }
     permission_classes = [IsAdminUser]
     
-    base_cods = [
-        WAITING_STATUS_CODE,
-        PROCESSING_STATUS_CODE,
-        APPROVED_STATUS_CODE,
-        ACCEPTED_STATUS_CODE,
-    ]
+    base_cods = {
+        'waiting': WAITING_STATUS_CODE,
+        'processing': PROCESSING_STATUS_CODE,
+        'approved': APPROVED_STATUS_CODE,
+        'accepted': ACCEPTED_STATUS_CODE,
+    }
     
     def destroy(self, request, *args, **kwargs):
         code = kwargs.get('pk')
-        if code and code in self.base_cods:
+        if code and code in self.base_cods.values():
             return Response(status=HTTP_400_BAD_REQUEST, data='Невозможно удалить данный статус')
         return super().destroy(request, *args, **kwargs)
 
@@ -136,6 +139,11 @@ class StatusView(CRUDViewSet):
         tags=['Управление заявками'],
         description='Та же схема что и с другими заявками.',
     ),
+    take_application=extend_schema(
+        summary='Взять заявку на обработку',
+        tags=['Управление заявками'],
+        parameters=None,
+    )
 )
 class ApplicationManagementView(DestroyViewSet):
     queryset = Application.objects.all()
@@ -143,6 +151,7 @@ class ApplicationManagementView(DestroyViewSet):
     multi_serializer_class = {
         'destroy': applications.ApplicationDestroySerializer,
         'change_status_application': applications.ApplicationChangeStatusSerializer,
+        'take_application': applications.TakeApplicationSerializer,
     }
 
     permission_classes = [CanManageApplications]
@@ -160,3 +169,25 @@ class ApplicationManagementView(DestroyViewSet):
             serializer.save()
             return Response(status=HTTP_204_NO_CONTENT)
         return Response(status=HTTP_400_BAD_REQUEST, data='Неправильный статус или заявка.')
+
+    @action(
+        methods=['patch'], detail=True,
+    )
+    def take_application(self, request, *args, **kwargs):
+        application = Application.objects.filter(pk=kwargs.get('pk')).first()
+        if application:
+            if not application.manager:
+                data = {
+                    'manager': request.user.id,
+                    'status': StatusView.base_cods.get('accepted'),
+                    'accepted_at': datetime.datetime.now(),
+                }
+                serializer = self.get_serializer(instance=application, data=data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(status=HTTP_200_OK, data=serializer.data)
+            else:
+                # Думал какой статус код надо отправлять и увидел этот бриллиант, поэтому тут чайник
+                return Response(status=HTTP_418_IM_A_TEAPOT, data='Данная заявка уже обрабатывается')
+        else:
+            return Response(status=HTTP_400_BAD_REQUEST, data='Заявки не существует')

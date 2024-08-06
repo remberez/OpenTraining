@@ -32,4 +32,4 @@ class StatusAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'full_name', 'game', 'status')
+    list_display = ('id', 'full_name', 'game', 'status', 'created_at')

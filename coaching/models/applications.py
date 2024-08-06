@@ -30,9 +30,11 @@ class Application(models.Model):
         related_name='accepted_applications', on_delete=models.SET_NULL,
     )
     about_sender = models.TextField(verbose_name='Информация об отправителе')
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        verbose_name='Дата создания заявки', auto_now=True, editable=True
+    )
     accepted_at = models.DateTimeField(
-        null=True, blank=True
+        null=True, blank=True, verbose_name='Дата принятия заявки'
     )
     status = models.ForeignKey(
         'Status', verbose_name='Статус заявки',
