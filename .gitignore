@@ -170,3 +170,6 @@ media/
 
 **/migrations/
 **/.idea/
+
+coaching/credentials.json
+coaching/token.json
