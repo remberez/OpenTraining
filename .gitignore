@@ -173,3 +173,5 @@ media/
 
 coaching/credentials.json
 coaching/token.json
+coaching/credentials_example.json
+coaching/token_example.json
