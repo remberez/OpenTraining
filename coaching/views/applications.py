@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from coaching.backends import ApplicationFilter
 from coaching.models.applications import Application, Status
-from coaching.permissions import CanManageApplications
+from coaching.permissions import CanManageApplications, IsManagerOfCurrentlyApplication
 from common.views.mixins import CRDViewSet, CRUDViewSet, UDViewSet, CRViewSet, DestroyViewSet
 from coaching.serializers import applications
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -152,6 +152,16 @@ class StatusView(CRUDViewSet):
         summary='Создать гугл встречу по заявке',
         tags=['Управление заявками'],
         parameters=None
+    ),
+    application_for_processing=extend_schema(
+        summary="Отправить заявку на рассмотрение",
+        tags=['Управление заявками'],
+        parameters=None,
+    ),
+    approve_application=extend_schema(
+        summary="Одобрить заявку",
+        tags=['Управление заявками'],
+        parameters=None,
     )
 )
 class ApplicationManagementView(DestroyViewSet):
@@ -162,24 +172,27 @@ class ApplicationManagementView(DestroyViewSet):
         'take_application': applications.TakeApplicationSerializer,
     }
 
-    permission_classes = [CanManageApplications]
+    permission_classes = [IsManagerOfCurrentlyApplication | IsAdminUser]
+    multi_permission_classes = {
+        "take_application": [CanManageApplications]
+    }
 
     @action(
         methods=['patch'], detail=True,
     )
     def change_status_application(self, request, *args, **kwargs):
         application = Application.objects.filter(pk=kwargs.get('pk')).first()
-        status = Status.objects.filter(code=request.data.get('status')).first().code
+        app_status = Status.objects.filter(code=request.data.get('status')).first().code
 
-        if application and status:
-            serializer = self.get_serializer(instance=application, data={'status': status})
+        if application and app_status:
+            serializer = self.get_serializer(instance=application, data={'status': app_status})
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_400_BAD_REQUEST, data='Неправильный статус или заявка.')
 
     @action(
-        methods=['patch'], detail=False,
+        methods=['patch'], detail=True,
     )
     def take_application(self, request, *args, **kwargs):
         application = Application.objects.filter(pk=kwargs.get('pk')).first()
@@ -217,7 +230,6 @@ class ApplicationManagementView(DestroyViewSet):
                     причине вы не сможете ответить на звонок или вам требуется изменить время, дайте нам знать заранее 
                     – мы постараемся учесть ваши пожелания.
                     В ожидании разговора!
-                    Ваш менеджер по заявке: {data['manager'].username}
                    '''
 
         return send_mail(
@@ -233,18 +245,41 @@ class ApplicationManagementView(DestroyViewSet):
     )
     def create_google_meet(self, request, *args, **kwargs):
         application = self.get_object()
-        date_of_call = application.date_of_call
-        delta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)
-        if delta >= date_of_call:
-            try:
-                coaching_config = apps.get_app_config('coaching')
-                client = meet_v2.SpacesServiceClient(credentials=coaching_config.creds)
-                request = meet_v2.CreateSpaceRequest()
-                response = client.create_space(request=request)
-                application.google_meet_uri = response.meeting_uri
-                application.save()
-                return Response(status=status.HTTP_200_OK, data=response.meeting_uri)
-            except Exception:
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if not application.google_meet_uri:
+            date_of_call = application.date_of_call
+            delta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)
+            if delta >= date_of_call:
+                try:
+                    coaching_config = apps.get_app_config('coaching')
+                    client = meet_v2.SpacesServiceClient(credentials=coaching_config.creds)
+                    request = meet_v2.CreateSpaceRequest()
+                    response = client.create_space(request=request)
+                    application.google_meet_uri = response.meeting_uri
+                    application.save()
+                    return Response(status=status.HTTP_200_OK, data=response.meeting_uri)
+                except Exception:
+                    return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                return Response(status=status.HTTP_406_NOT_ACCEPTABLE, data="Встречу можно создать за 30 минут до её начала")
         else:
-            return Response(status=status.HTTP_406_NOT_ACCEPTABLE, data="Встречу можно создать за 30 минут до её начала")
+            return Response(status=status.HTTP_400_BAD_REQUEST, data="Встреча уже существует")
+
+    @action(
+        methods=['get'], detail=True
+    )
+    def application_for_processing(self, request, *args, **kwargs):
+        self.change_application_status(PROCESSING_STATUS_CODE)
+        return Response(status=status.HTTP_200_OK)
+
+    @action(
+        methods=['get'], detail=True
+    )
+    def approve_application(self, request, *args, **kwargs):
+        self.change_application_status(APPROVED_STATUS_CODE)
+        return Response(status=status.HTTP_200_OK)
+
+    def change_application_status(self, status_code):
+        application = self.get_object()
+        status_code = Status.objects.filter(code=status_code).first()
+        application.status = status_code
+        application.save()
