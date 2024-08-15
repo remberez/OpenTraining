@@ -84,14 +84,6 @@ class ApplicationListSerializer(serializers.ModelSerializer):
         )
 
 
-class ApplicationDestroySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Application
-        fields = (
-            'id',
-        )
-
-
 class ApplicationChangeStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Application
@@ -108,4 +100,5 @@ class TakeApplicationSerializer(serializers.ModelSerializer):
             'status',
             'manager',
             'accepted_at',
+            "date_of_call",
         )

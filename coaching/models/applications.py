@@ -53,6 +53,12 @@ class Application(models.Model):
     rating = models.CharField(
         max_length=32, verbose_name='Рейтинг отправителя',
     )
+    date_of_call = models.DateTimeField(
+        verbose_name="Дата звонка", null=True, blank=True,
+    )
+    google_meet_uri = models.URLField(
+        verbose_name="Ссылка на гугл мит", null=True, blank=True
+    )
 
     class Meta:
         verbose_name = 'Заявка'

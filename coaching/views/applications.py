@@ -1,8 +1,10 @@
 import datetime
+
+from django.apps import apps
+from django.conf import settings
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.status import HTTP_403_FORBIDDEN, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_200_OK, \
-    HTTP_418_IM_A_TEAPOT
+from rest_framework import status
 from coaching.backends import ApplicationFilter
 from coaching.models.applications import Application, Status
 from coaching.permissions import CanManageApplications
@@ -12,6 +14,8 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.filters import OrderingFilter, SearchFilter
 from coaching.constants.statuses import *
+from django.core.mail import send_mail
+from google.apps import meet_v2
 
 
 @extend_schema_view(
@@ -76,7 +80,7 @@ class ApplicationView(CRViewSet):
 
     def create(self, request, *args, **kwargs):
         if self.filter_queryset(self.get_queryset()):
-            return Response(status=HTTP_403_FORBIDDEN)
+            return Response(status=status.HTTP_403_FORBIDDEN)
         return super().create(request, *args, **kwargs)
 
 
@@ -111,18 +115,18 @@ class StatusView(CRUDViewSet):
         'destroy': applications.StatusDeleteSerializer
     }
     permission_classes = [IsAdminUser]
-    
+
     base_cods = {
         'waiting': WAITING_STATUS_CODE,
         'processing': PROCESSING_STATUS_CODE,
         'approved': APPROVED_STATUS_CODE,
         'accepted': ACCEPTED_STATUS_CODE,
     }
-    
+
     def destroy(self, request, *args, **kwargs):
         code = kwargs.get('pk')
         if code and code in self.base_cods.values():
-            return Response(status=HTTP_400_BAD_REQUEST, data='Невозможно удалить данный статус')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='Невозможно удалить данный статус')
         return super().destroy(request, *args, **kwargs)
 
 
@@ -143,13 +147,17 @@ class StatusView(CRUDViewSet):
         summary='Взять заявку на обработку',
         tags=['Управление заявками'],
         parameters=None,
+    ),
+    create_google_meet=extend_schema(
+        summary='Создать гугл встречу по заявке',
+        tags=['Управление заявками'],
+        parameters=None
     )
 )
 class ApplicationManagementView(DestroyViewSet):
     queryset = Application.objects.all()
 
     multi_serializer_class = {
-        'destroy': applications.ApplicationDestroySerializer,
         'change_status_application': applications.ApplicationChangeStatusSerializer,
         'take_application': applications.TakeApplicationSerializer,
     }
@@ -167,27 +175,76 @@ class ApplicationManagementView(DestroyViewSet):
             serializer = self.get_serializer(instance=application, data={'status': status})
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(status=HTTP_204_NO_CONTENT)
-        return Response(status=HTTP_400_BAD_REQUEST, data='Неправильный статус или заявка.')
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST, data='Неправильный статус или заявка.')
 
     @action(
-        methods=['patch'], detail=True,
+        methods=['patch'], detail=False,
     )
     def take_application(self, request, *args, **kwargs):
         application = Application.objects.filter(pk=kwargs.get('pk')).first()
+        date_of_call = request.data.get("date_of_call")
         if application:
             if not application.manager:
                 data = {
                     'manager': request.user.id,
                     'status': StatusView.base_cods.get('accepted'),
                     'accepted_at': datetime.datetime.now(),
+                    'date_of_call': date_of_call,
                 }
+                is_send = self.send_message_about_call(data, application)
+                if not is_send:
+                    return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
                 serializer = self.get_serializer(instance=application, data=data)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
-                return Response(status=HTTP_200_OK, data=serializer.data)
+                return Response(status=status.HTTP_200_OK, data=serializer.data)
             else:
                 # Думал какой статус код надо отправлять и увидел этот бриллиант, поэтому тут чайник
-                return Response(status=HTTP_418_IM_A_TEAPOT, data='Данная заявка уже обрабатывается')
+                return Response(status=status.HTTP_418_IM_A_TEAPOT, data='Данная заявка уже обрабатывается')
         else:
-            return Response(status=HTTP_400_BAD_REQUEST, data='Заявки не существует')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='Заявки не существует')
+
+    def send_message_about_call(self, data, application):
+        title = f'Вы были приглашены на обзвон в дискорд по вашей заявке {application.id}'
+        message = f'''
+                    Здравствуйте, {application.full_name}!
+                    Благодарим вас за вашу заявку на тренерство на нашем сайте! Мы рады сообщить, что ваша кандидатура
+                    была успешно получена, и мы хотели бы обсудить с вами детали вашего опыта и пожеланий.
+                    **Дата и время звонка:** {data['date_of_call']}.
+                    Пожалуйста, убедитесь, что у вас будет возможность пообщаться в указанное время. Если по какой-либо
+                    причине вы не сможете ответить на звонок или вам требуется изменить время, дайте нам знать заранее 
+                    – мы постараемся учесть ваши пожелания.
+                    В ожидании разговора!
+                    Ваш менеджер по заявке: {data['manager'].username}
+                   '''
+
+        return send_mail(
+            title,
+            message,
+            "agasianartyom@yandex.ru",
+            [application.sender.email],
+            fail_silently=False
+        )
+
+    @action(
+        methods=['get'], detail=True
+    )
+    def create_google_meet(self, request, *args, **kwargs):
+        application = self.get_object()
+        date_of_call = application.date_of_call
+        delta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)
+        if delta >= date_of_call:
+            try:
+                coaching_config = apps.get_app_config('coaching')
+                client = meet_v2.SpacesServiceClient(credentials=coaching_config.creds)
+                request = meet_v2.CreateSpaceRequest()
+                response = client.create_space(request=request)
+                application.google_meet_uri = response.meeting_uri
+                application.save()
+                return Response(status=status.HTTP_200_OK, data=response.meeting_uri)
+            except Exception:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(status=status.HTTP_406_NOT_ACCEPTABLE, data="Встречу можно создать за 30 минут до её начала")

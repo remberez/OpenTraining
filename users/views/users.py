@@ -7,12 +7,12 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from common.permissions.user import IsUserAccount, IsAdmin
 from common.views.pagination import BasePagination
+from users.constants.positions import LEARNER_CODE
 from users.filters import UserFilter
 from users.constants.positions import TEACHER_CODE
-from users.serializers.users import UserRegistrationSerializer, UserListAndDetail, ChangePasswordSerializer, \
-    PartialUpdateUserSerializer
+from users.serializers import users
 from common.views.mixins import RUDViewSet
-from rest_framework.status import HTTP_201_CREATED
+from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -45,14 +45,13 @@ User = get_user_model()
         tags=['Управление аккаунтом'],
     )
 )
-class UserRegistration(RUDViewSet):
+class UserView(RUDViewSet):
     multi_serializer_class = {
-        'registration': UserRegistrationSerializer,
-        'list': UserListAndDetail,
-        'retrieve': UserListAndDetail,
-        'destroy': UserListAndDetail,
-        'change_password': ChangePasswordSerializer,
-        'partial_update': PartialUpdateUserSerializer,
+        'registration': users.UserRegistrationSerializer,
+        'list': users.UserListAndDetail,
+        'retrieve': users.UserListAndDetail,
+        'change_password': users.ChangePasswordSerializer,
+        'partial_update': users.PartialUpdateUserSerializer,
     }
 
     filter_backends = (
@@ -83,7 +82,7 @@ class UserRegistration(RUDViewSet):
         user_serializer = serializer(data=request.data)
         user_serializer.is_valid(raise_exception=True)
         user_serializer.save()
-        return Response(user_serializer.data, status=HTTP_201_CREATED)
+        return Response(user_serializer.data, status=status.HTTP_201_CREATED)
 
     @action(methods=['patch'], detail=False)
     def change_password(self, request):
@@ -103,3 +102,11 @@ class UserRegistration(RUDViewSet):
                 When(position=TEACHER_CODE, then=True), default=False,
             )
         )
+
+    def destroy(self, request, *args, **kwargs):
+        # Пользователь не может удалить свой аккаунт, если занимает какую-либо должность.
+        instance = self.get_object()
+        if instance.position.code != LEARNER_CODE:
+            return Response(status=status.HTTP_403_FORBIDDEN, data="Обратитесь к администратору.")
+        return super().destroy(request, *args, **kwargs)
+    

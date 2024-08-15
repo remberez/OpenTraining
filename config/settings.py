@@ -238,3 +238,11 @@ AUTH_USER_MODEL = 'users.User'
 
 MEDIA_ROOT = 'media'
 MEDIA_URL = 'media/'
+
+EMAIL_HOST = 'smtp.yandex.ru'
+EMAIL_PORT = 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
+EMAIL_HOST_USER = 'agasianartyom@yandex.ru'
+EMAIL_HOST_PASSWORD = '222333Aa'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
