@@ -1,10 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
-from users.constants.positions import TEACHER_CODE, ADMIN_CODE
 from common.serializers.mixins import ValidateMixin
+from coaching.serializers.coaching import TeacherGameSerializer
 
 User = get_user_model()
 
@@ -149,4 +148,19 @@ class PartialUpdateUserSerializer(UserValidate, serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_public',
+        )
+
+
+class TeacherSerializer(serializers.ModelSerializer):
+    games_taught = TeacherGameSerializer(many=True, source='teachers_game')
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'discord_id',
+            'name',
+            'image',
+            'games_taught'
         )

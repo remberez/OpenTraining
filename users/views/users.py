@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Case, When
+from django.db.models import Case, When, Q
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -11,10 +11,11 @@ from users.constants.positions import LEARNER_CODE
 from users.filters import UserFilter
 from users.constants.positions import TEACHER_CODE
 from users.serializers import users
-from common.views.mixins import RUDViewSet
+from common.views.mixins import RUDViewSet, ListRetrieveViewSet
 from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from users.constants import positions
 
 User = get_user_model()
 
@@ -105,4 +106,20 @@ class UserView(RUDViewSet):
         if instance.position.code != LEARNER_CODE:
             return Response(status=status.HTTP_403_FORBIDDEN, data="Обратитесь к администратору.")
         return super().destroy(request, *args, **kwargs)
-    
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary='Список тренеров',
+        tags=['Тренера']
+    ),
+    retrieve=extend_schema(
+        summary='Детальная информация о тренере',
+        tags=['Тренера']
+    )
+)
+class TeacherView(ListRetrieveViewSet):
+    queryset = User.objects.filter(
+        position=positions.TEACHER_CODE
+    )
+    serializer_class = users.TeacherSerializer

@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from coaching.models.coaching import Coaching
+from coaching.models.coaching import Coaching, TeacherGame
+from coaching.serializers.games import GameShortSerializer
 
 
 class CoachingSerializer(serializers.ModelSerializer):
@@ -25,4 +26,17 @@ class CoachingShortSerializer(serializers.ModelSerializer):
         fields = (
             'pk',
             'game',
+        )
+
+
+class TeacherGameSerializer(serializers.ModelSerializer):
+    game = GameShortSerializer()
+
+    class Meta:
+        model = TeacherGame
+        fields = (
+            'game',
+            'description',
+            'price',
+            'rating',
         )

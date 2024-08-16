@@ -47,11 +47,12 @@ class ApplicationCreateSerializer(ValidateMixin, serializers.ModelSerializer):
         request = self.context.get('request')
         if request:
             sender_profile_discord = request.user.discord_id
+            check_exists = User.objects.filter(discord_id=value).first()
             if not value:
                 raise ParseError('Нужно указать дискорд')
             elif sender_profile_discord != value and sender_profile_discord is not None:
                 raise ParseError('Нельзя указать дискорд отличный от дискорда в профиле')
-            elif User.objects.filter(discord_id=value).first() != request.user:
+            elif check_exists is not None and check_exists != request.user:
                 raise ParseError('Данный дискорд уже используется')
         return value
     

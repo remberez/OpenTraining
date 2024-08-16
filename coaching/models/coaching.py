@@ -37,9 +37,9 @@ class TeacherGame(models.Model):
         'coaching.Game', verbose_name='Игра',
         on_delete=models.RESTRICT, related_name='teachers',
     )
-    description = models.TextField()
+    description = models.TextField(null=True, blank=True)
     date_created = models.DateField(auto_now=True)
-    price = models.FloatField()
+    price = models.FloatField(null=True, blank=True)
     rating = models.PositiveSmallIntegerField()
 
     class Meta:

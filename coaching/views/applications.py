@@ -15,6 +15,8 @@ from coaching.constants.statuses import *
 from django.core.mail import send_mail
 from google.apps import meet_v2
 from users.constants import positions
+from users.models.position import Position
+from coaching.models.coaching import TeacherGame
 
 
 @extend_schema_view(
@@ -170,12 +172,11 @@ class ApplicationManagementView(DestroyViewSet):
     permission_classes = [IsManagerOfCurrentlyApplication | IsAdminUser]
     multi_permission_classes = {
         "change_status_application": [IsAdminUser],
-        "take_application": [CanManageApplications]
+        "take_application": [CanManageApplications],
+        'approve_application': [IsAdminUser]
     }
 
-    @action(
-        methods=['patch'], detail=True,
-    )
+    @action(methods=['patch'], detail=True,)
     def change_status_application(self, request, *args, **kwargs):
         application = self.get_object()
         if application:
@@ -185,9 +186,7 @@ class ApplicationManagementView(DestroyViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_400_BAD_REQUEST, data='Неправильный статус или заявка.')
 
-    @action(
-        methods=['patch'], detail=True,
-    )
+    @action(methods=['patch'], detail=True,)
     def take_application(self, request, *args, **kwargs):
         application = Application.objects.filter(pk=kwargs.get('pk')).first()
         if application:
@@ -223,9 +222,7 @@ class ApplicationManagementView(DestroyViewSet):
             fail_silently=False
         )
 
-    @action(
-        methods=['get'], detail=True
-    )
+    @action(methods=['get'], detail=True)
     def create_google_meet(self, request, *args, **kwargs):
         application = self.get_object()
         if not application.google_meet_uri:
@@ -247,25 +244,36 @@ class ApplicationManagementView(DestroyViewSet):
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST, data="Встреча уже существует")
 
-    @action(
-        methods=['get'], detail=True
-    )
+    @action(methods=['get'], detail=True)
     def application_for_processing(self, request, *args, **kwargs):
         self.change_application_status(PROCESSING_STATUS_CODE)
         return Response(status=status.HTTP_200_OK)
 
-    @action(
-        methods=['get'], detail=True
-    )
+    @action(methods=['get'], detail=True)
     def approve_application(self, request, *args, **kwargs):
-        self.change_application_status(APPROVED_STATUS_CODE)
-        user = self.get_object().sender
-        user.status = positions.TEACHER_CODE
-        return Response(status=status.HTTP_200_OK)
+        application = self.get_object()
+        response = Response(status=status.HTTP_200_OK)
+        if application.status.code == PROCESSING_STATUS_CODE:
+            self.change_application_status(APPROVED_STATUS_CODE)
+            user = self.get_object().sender
+            teacher_code = Position.objects.filter(code=positions.TEACHER_CODE).first()
+            if user.position != teacher_code:
+                user.position = teacher_code
+                user.save()
 
-    @action(
-        methods=['get'], detail=True
-    )
+            TeacherGame.objects.create(
+                teacher=user,
+                game=application.game,
+                description=None,
+                date_created=datetime.datetime.now(),
+                price=None,
+                rating=application.rating,
+            )
+        else:
+            response = Response(status=status.HTTP_409_CONFLICT, data='Данная заявка не находится на стадии рассмотрения.')
+        return response
+
+    @action(methods=['get'], detail=True)
     def reject_application(self, request, *args, **kwargs):
         self.change_application_status(REJECTED_STATUS_CODE)
         return Response(status=status.HTTP_200_OK)
