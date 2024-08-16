@@ -1,0 +1,44 @@
+[
+  {
+    "model": "coaching.status",
+    "pk": "accepted",
+    "fields": {
+      "name": "Принята"
+    }
+  },
+  {
+    "model": "coaching.status",
+    "pk": "approved",
+    "fields": {
+      "name": "Одобрена"
+    }
+  },
+  {
+    "model": "coaching.status",
+    "pk": "processing",
+    "fields": {
+      "name": "В обработке"
+    }
+  },
+  {
+    "model": "coaching.status",
+    "pk": "rejected",
+    "fields": {
+      "name": "Отклонено"
+    }
+  },
+  {
+    "model": "coaching.status",
+    "pk": "waiting",
+    "fields": {
+      "name": "В ожидании"
+    }
+  },
+  {
+    "model": "coaching.status",
+    "pk": "Отклонено",
+    "fields": {
+      "name": "rejected"
+    }
+  }
+]

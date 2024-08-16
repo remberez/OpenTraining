@@ -3,8 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
-from users.constants.positions import TEACHER_CODE
-from users.serializers.profiles import TeacherProfileSerializer, LearnerProfileSerializer
+from users.constants.positions import TEACHER_CODE, ADMIN_CODE
 from common.serializers.mixins import ValidateMixin
 
 User = get_user_model()
@@ -94,19 +93,9 @@ class UserListAndDetail(serializers.ModelSerializer):
                     fields_to_send[key] = value
             return fields_to_send
 
-    def define_profile(self, instance):
-        position = instance.position
-        if position:
-            if position.code == TEACHER_CODE:
-                profile = TeacherProfileSerializer(instance.teacher_profile).data
-            else:
-                profile = LearnerProfileSerializer(instance.learner_profile).data
-            return profile
-
     def to_representation(self, instance):
         fields = super().to_representation(instance)
         fields = self.check_permissions(instance, fields)
-        fields['profile'] = self.define_profile(instance)
         return fields
 
 

@@ -1,13 +1,17 @@
+from django.contrib.auth import get_user_model
 from django.db import models
+
+
+User = get_user_model()
 
 
 class Coaching(models.Model):
     teacher = models.ForeignKey(
-        'users.Teacher', verbose_name='Учитель',
+        User, verbose_name='Учитель',
         on_delete=models.CASCADE, related_name='teacher_coaching'
     )
     learner = models.ForeignKey(
-        'users.Learner', verbose_name='Ученик',
+        User, verbose_name='Ученик',
         on_delete=models.CASCADE, related_name='learner_coaching'
     )
     game = models.ForeignKey(
@@ -26,8 +30,8 @@ class Coaching(models.Model):
 
 class TeacherGame(models.Model):
     teacher = models.ForeignKey(
-        'users.Teacher', verbose_name='Учитель',
-        on_delete=models.CASCADE, related_name=None
+        User, verbose_name='Учитель',
+        on_delete=models.CASCADE, related_name='teachers_game'
     )
     game = models.ForeignKey(
         'coaching.Game', verbose_name='Игра',

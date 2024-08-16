@@ -1,0 +1,30 @@
+[
+  {
+    "model": "users.position",
+    "pk": "admin",
+    "fields": {
+      "name": "Администратор"
+    }
+  },
+  {
+    "model": "users.position",
+    "pk": "learner",
+    "fields": {
+      "name": "Ученик"
+    }
+  },
+  {
+    "model": "users.position",
+    "pk": "manager",
+    "fields": {
+      "name": "Mенеджер"
+    }
+  },
+  {
+    "model": "users.position",
+    "pk": "teacher",
+    "fields": {
+      "name": "Учитель"
+    }
+  }
+]

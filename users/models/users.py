@@ -1,9 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from .managers import CustomUserManager
-from .profiles import Learner
 
 
 class User(AbstractUser):
@@ -24,6 +21,27 @@ class User(AbstractUser):
         related_name='users', on_delete=models.RESTRICT,
         null=True,
     )
+    name = models.CharField(
+        verbose_name='Имя', max_length=25,
+    )
+
+    # Модели профиля будут иметь username и name
+    # username - что-то вроде id аккаунта как в телеграмме,
+    # name - конкретное, отображаемое имя на странице пользователя.
+
+    image = models.ImageField(
+        upload_to='users/%Y/%m/%d/', null=True, blank=True,
+    )
+    date_joined = models.DateField(auto_now=True, editable=True)
+    games_taught = models.ManyToManyField(
+        'coaching.Game', verbose_name='Преподаваемые игры',
+        related_name='game_teachers', through='coaching.TeacherGame',
+    )
+    learning_games = models.ManyToManyField(
+        'coaching.TeacherGame', verbose_name='Игры ученика',
+        related_name='learner_games', through='coaching.Coaching',
+        through_fields=('learner', 'game')
+    )
 
     objects = CustomUserManager()
 
@@ -33,12 +51,3 @@ class User(AbstractUser):
 
     def __str__(self):
         return f'{self.username}'
-
-
-@receiver(post_save, sender=User)
-def post_save_user(sender, instance, created, **kwargs):
-    if not hasattr(instance, 'learner_profile'):
-        Learner.objects.create(
-            user=instance,
-            name=instance.username,
-        )

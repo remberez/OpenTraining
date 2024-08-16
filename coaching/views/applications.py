@@ -1,7 +1,5 @@
 import datetime
-
 from django.apps import apps
-from django.conf import settings
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,6 +14,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from coaching.constants.statuses import *
 from django.core.mail import send_mail
 from google.apps import meet_v2
+from users.constants import positions
 
 
 @extend_schema_view(
@@ -70,16 +69,8 @@ class ApplicationView(CRViewSet):
     ordering_fields = ('full_name', 'created_at', 'approved_at', 'status')
     ordering = ('created_at',)
 
-    def perform_create(self, serializer):
-        # Возможно надо это делать в сериалайзере, но раз уже написал то хуй с ним
-        meta_data = {
-            'status': Status.objects.filter(code=WAITING_STATUS_CODE).first(),
-            'sender': self.request.user,
-        }
-        serializer.save(**meta_data)
-
     def create(self, request, *args, **kwargs):
-        if self.filter_queryset(self.get_queryset()):
+        if self.filter_queryset(self.get_queryset()) and not IsAdminUser().has_permission(request, self):
             return Response(status=status.HTTP_403_FORBIDDEN)
         return super().create(request, *args, **kwargs)
 
@@ -146,7 +137,6 @@ class StatusView(CRUDViewSet):
     take_application=extend_schema(
         summary='Взять заявку на обработку',
         tags=['Управление заявками'],
-        parameters=None,
     ),
     create_google_meet=extend_schema(
         summary='Создать гугл встречу по заявке',
@@ -162,6 +152,11 @@ class StatusView(CRUDViewSet):
         summary="Одобрить заявку",
         tags=['Управление заявками'],
         parameters=None,
+    ),
+    reject_application=extend_schema(
+        summary="Отклонить заявку",
+        tags=['Управление заявками'],
+        parameters=None,
     )
 )
 class ApplicationManagementView(DestroyViewSet):
@@ -174,6 +169,7 @@ class ApplicationManagementView(DestroyViewSet):
 
     permission_classes = [IsManagerOfCurrentlyApplication | IsAdminUser]
     multi_permission_classes = {
+        "change_status_application": [IsAdminUser],
         "take_application": [CanManageApplications]
     }
 
@@ -181,11 +177,9 @@ class ApplicationManagementView(DestroyViewSet):
         methods=['patch'], detail=True,
     )
     def change_status_application(self, request, *args, **kwargs):
-        application = Application.objects.filter(pk=kwargs.get('pk')).first()
-        app_status = Status.objects.filter(code=request.data.get('status')).first().code
-
-        if application and app_status:
-            serializer = self.get_serializer(instance=application, data={'status': app_status})
+        application = self.get_object()
+        if application:
+            serializer = self.get_serializer(instance=application, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -196,23 +190,12 @@ class ApplicationManagementView(DestroyViewSet):
     )
     def take_application(self, request, *args, **kwargs):
         application = Application.objects.filter(pk=kwargs.get('pk')).first()
-        date_of_call = request.data.get("date_of_call")
         if application:
             if not application.manager:
-                data = {
-                    'manager': request.user.id,
-                    'status': StatusView.base_cods.get('accepted'),
-                    'accepted_at': datetime.datetime.now(),
-                    'date_of_call': date_of_call,
-                }
-                is_send = self.send_message_about_call(data, application)
-                if not is_send:
-                    return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                serializer = self.get_serializer(instance=application, data=data)
+                serializer = self.get_serializer(self.get_object(), data=self.request.data)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
-                return Response(status=status.HTTP_200_OK, data=serializer.data)
+                return Response(status=status.HTTP_200_OK)
             else:
                 # Думал какой статус код надо отправлять и увидел этот бриллиант, поэтому тут чайник
                 return Response(status=status.HTTP_418_IM_A_TEAPOT, data='Данная заявка уже обрабатывается')
@@ -276,6 +259,15 @@ class ApplicationManagementView(DestroyViewSet):
     )
     def approve_application(self, request, *args, **kwargs):
         self.change_application_status(APPROVED_STATUS_CODE)
+        user = self.get_object().sender
+        user.status = positions.TEACHER_CODE
+        return Response(status=status.HTTP_200_OK)
+
+    @action(
+        methods=['get'], detail=True
+    )
+    def reject_application(self, request, *args, **kwargs):
+        self.change_application_status(REJECTED_STATUS_CODE)
         return Response(status=status.HTTP_200_OK)
 
     def change_application_status(self, status_code):

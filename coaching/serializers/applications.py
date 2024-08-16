@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from coaching.models.applications import Status, Application
 from common.serializers.mixins import ValidateMixin
-
+from coaching.constants.statuses import ACCEPTED_STATUS_CODE, WAITING_STATUS_CODE
 
 User = get_user_model()
 
@@ -52,6 +54,12 @@ class ApplicationCreateSerializer(ValidateMixin, serializers.ModelSerializer):
             elif User.objects.filter(discord_id=value).first() != request.user:
                 raise ParseError('Данный дискорд уже используется')
         return value
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data['status'] = Status.objects.filter(code=WAITING_STATUS_CODE).first()
+        validated_data['sender'] = request.user
+        return super().create(validated_data)
 
 
 class ApplicationRetrieveSerializer(serializers.ModelSerializer):
@@ -102,3 +110,13 @@ class TakeApplicationSerializer(serializers.ModelSerializer):
             'accepted_at',
             "date_of_call",
         )
+        read_only_fields = ('status', 'manager', 'accepted_at')
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        instance.date_of_call = validated_data.get('date_of_call', instance.date_of_call)
+        instance.status = Status.objects.filter(code=ACCEPTED_STATUS_CODE).first()
+        instance.manager = request.user
+        instance.accepted_at = datetime.now()
+        instance.save()
+        return instance

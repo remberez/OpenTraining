@@ -93,11 +93,7 @@ class UserView(RUDViewSet):
         return Response(status=HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        return User.objects.select_related(
-            'learner_profile'
-        ).select_related(
-            'teacher_profile'
-        ).annotate(
+        return User.objects.annotate(
             is_teacher=Case(
                 When(position=TEACHER_CODE, then=True), default=False,
             )
