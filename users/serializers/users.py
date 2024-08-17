@@ -162,5 +162,5 @@ class TeacherSerializer(serializers.ModelSerializer):
             'discord_id',
             'name',
             'image',
-            'games_taught'
+            'games_taught',
         )

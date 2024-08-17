@@ -3,7 +3,7 @@ from coaching.models.applications import Application
 from coaching.permissions import CanManageApplications
 
 
-class CustomSearchFilter(SearchFilter):
+class GameCustomSearchFilter(SearchFilter):
     def get_search_terms(self, request):
         if request.query_params.get('genre'):
             return [request.query_params.get('genre')]

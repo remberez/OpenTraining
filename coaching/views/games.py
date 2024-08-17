@@ -3,7 +3,7 @@ from drf_spectacular.utils import extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema
-from coaching.backends import CustomSearchFilter
+from coaching.backends import GameCustomSearchFilter
 from coaching.models.games import Game, GameGenre
 from common.permissions.user import IsAdmin
 from common.views.mixins import CRUDViewSet
@@ -55,7 +55,7 @@ class GameView(CRUDViewSet):
         'create': CreateGameSerializer,
         'destroy': DeleteGameSerializer,
         'partial_update': GameUpdateSerializer,
-        'short_info_list': ShortInfoGameSerializer,
+        'short_info_list': GameShortSerializer,
     }
 
     multi_permission_classes = {
@@ -73,7 +73,7 @@ class GameView(CRUDViewSet):
     filter_backends = (
         OrderingFilter,
         DjangoFilterBackend,
-        CustomSearchFilter,
+        GameCustomSearchFilter,
     )
 
     search_fields = ('name', 'description',)

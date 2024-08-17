@@ -57,15 +57,6 @@ class DeleteGameSerializer(serializers.ModelSerializer):
         fields = ('pk',)
 
 
-class ShortInfoGameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Game
-        fields = (
-            'id',
-            'name',
-        )
-
-
 class GameUpdateSerializer(ValidateGameMixin, serializers.ModelSerializer):
     name = serializers.CharField(required=False)
     description = serializers.CharField(required=False)

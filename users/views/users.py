@@ -1,12 +1,13 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Case, When, Q
-from drf_spectacular.utils import extend_schema_view, extend_schema
+from django.db.models import Case, When
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from common.permissions.user import IsUserAccount, IsAdmin
 from common.views.pagination import BasePagination
+from users.backends import TeacherFilter, TeacherQSFilter
 from users.constants.positions import LEARNER_CODE
 from users.filters import UserFilter
 from users.constants.positions import TEACHER_CODE
@@ -111,7 +112,7 @@ class UserView(RUDViewSet):
 @extend_schema_view(
     list=extend_schema(
         summary='Список тренеров',
-        tags=['Тренера']
+        tags=['Тренера'],
     ),
     retrieve=extend_schema(
         summary='Детальная информация о тренере',
@@ -122,4 +123,17 @@ class TeacherView(ListRetrieveViewSet):
     queryset = User.objects.filter(
         position=positions.TEACHER_CODE
     )
+
     serializer_class = users.TeacherSerializer
+    filter_backends = (
+        SearchFilter,
+        TeacherQSFilter,
+        OrderingFilter,
+        DjangoFilterBackend,
+    )
+
+    search_fields = ('username',)
+    ordering_fields = ('username', 'pk', 'rating')
+    ordering = ('username',)
+    filterset_class = TeacherFilter
+    pagination_class = BasePagination
