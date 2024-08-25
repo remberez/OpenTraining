@@ -32,6 +32,7 @@ INSTALLED_APPS = [
 INSTALLED_APPS += [
     'rest_framework',
     'django_filters',
+    'debug_toolbar',
 ]
 
 # My apss
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -246,3 +248,8 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'agasianartyom@yandex.ru'
 EMAIL_HOST_PASSWORD = '222333Aa'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]

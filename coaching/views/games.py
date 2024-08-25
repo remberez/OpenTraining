@@ -3,7 +3,7 @@ from drf_spectacular.utils import extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema
-from coaching.backends import GameCustomSearchFilter
+from coaching.backends.games import GameFilter
 from coaching.models.games import Game, GameGenre
 from common.permissions.user import IsAdmin
 from common.views.mixins import CRUDViewSet
@@ -17,14 +17,6 @@ from django_filters.rest_framework import DjangoFilterBackend
     list=extend_schema(
         summary='Все игры',
         tags=['Игры'],
-        parameters=[
-            OpenApiParameter(
-                name='genre',
-                type=str,
-                location=OpenApiParameter.QUERY,
-                description='Фильтрация игр по жанру',
-            ),
-        ],
     ),
     retrieve=extend_schema(
         summary='Игра',
@@ -73,21 +65,21 @@ class GameView(CRUDViewSet):
     filter_backends = (
         OrderingFilter,
         DjangoFilterBackend,
-        GameCustomSearchFilter,
     )
 
+    filterset_class = GameFilter
     search_fields = ('name', 'description',)
     ordering_fields = ('name', 'pk')
     ordering = ('pk',)
 
-    @action(
-        methods=['get'], detail=False,
-    )
+    @action(methods=['get'], detail=False)
     def short_info_list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Game.objects.annotate(
+        return Game.objects.select_related(
+                    'genre'
+                ).annotate(
                     count_teachers=Count(
                         'teachers', distinct=True,
                     )
@@ -115,7 +107,6 @@ class GameView(CRUDViewSet):
         summary='Добавить жанр',
         tags=['Жанры'],
     ),
-
 )
 class GameGenreView(CRUDViewSet):
     multi_serializer_class = {
@@ -135,5 +126,10 @@ class GameGenreView(CRUDViewSet):
     }
 
     queryset = GameGenre.objects.all()
+
+    filter_backends = (
+        OrderingFilter,
+    )
+    ordering = ('id',)
     http_method_names = ('get', 'post', 'patch', 'delete')
     pagination_class = BasePagination

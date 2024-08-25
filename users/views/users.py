@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from common.permissions.user import IsUserAccount, IsAdmin
 from common.views.pagination import BasePagination
-from users.backends import TeacherFilter, TeacherQSFilter
+from users.backends.teachers import TeacherFilterSet, TeacherFilter
 from users.constants.positions import LEARNER_CODE
 from users.filters import UserFilter
 from users.constants.positions import TEACHER_CODE
@@ -16,7 +16,6 @@ from common.views.mixins import RUDViewSet, ListRetrieveViewSet
 from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from users.constants import positions
 
 User = get_user_model()
 
@@ -120,14 +119,10 @@ class UserView(RUDViewSet):
     )
 )
 class TeacherView(ListRetrieveViewSet):
-    queryset = User.objects.filter(
-        position=positions.TEACHER_CODE
-    )
-
     serializer_class = users.TeacherSerializer
     filter_backends = (
         SearchFilter,
-        TeacherQSFilter,
+        TeacherFilter,
         OrderingFilter,
         DjangoFilterBackend,
     )
@@ -135,5 +130,6 @@ class TeacherView(ListRetrieveViewSet):
     search_fields = ('username',)
     ordering_fields = ('username', 'pk', 'rating')
     ordering = ('username',)
-    filterset_class = TeacherFilter
+    filterset_class = TeacherFilterSet
     pagination_class = BasePagination
+    queryset = User.objects.all()

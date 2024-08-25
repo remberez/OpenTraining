@@ -3,7 +3,7 @@ from django.apps import apps
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
-from coaching.backends import ApplicationFilter
+from coaching.backends.applications import ApplicationFilter
 from coaching.models.applications import Application, Status
 from coaching.permissions import CanManageApplications, IsManagerOfCurrentlyApplication
 from common.views.mixins import CRDViewSet, CRUDViewSet, UDViewSet, CRViewSet, DestroyViewSet
@@ -75,6 +75,12 @@ class ApplicationView(CRViewSet):
         if self.filter_queryset(self.get_queryset()) and not IsAdminUser().has_permission(request, self):
             return Response(status=status.HTTP_403_FORBIDDEN)
         return super().create(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = self.queryset.select_related(
+            'game', 'sender', 'status'
+        )
+        return queryset
 
 
 @extend_schema_view(

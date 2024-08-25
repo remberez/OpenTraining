@@ -73,10 +73,25 @@ class CRViewSet(ExtendedGenericViewSet, CreateModelMixin,
     pass
 
 
+class CRUViewSet(ExtendedGenericViewSet, CreateModelMixin,
+                 ListModelMixin, RetrieveModelMixin,
+                 UpdateModelMixin):
+    pass
+
+
+class RUViewSet(ExtendedGenericViewSet, RetrieveModelMixin,
+                ListModelMixin, UpdateModelMixin):
+    pass
+
+
 class DestroyViewSet(ExtendedGenericViewSet, DestroyModelMixin):
     pass
 
 
 class ListRetrieveViewSet(ExtendedGenericViewSet, ListModelMixin,
                           RetrieveModelMixin):
+    pass
+
+
+class CreateViewSet(ExtendedGenericViewSet, CreateModelMixin):
     pass

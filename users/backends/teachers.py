@@ -1,39 +1,44 @@
 import django_filters
 from rest_framework import filters
 from django.contrib.auth import get_user_model
-from django.db.models import Subquery, OuterRef, Max, Case, When
+from django.db.models import Max, Case, When
 
-from coaching.models.games import Game
+from users.constants import positions
 
 User = get_user_model()
 
 
-class TeacherQSFilter(filters.BaseFilterBackend):
+class TeacherFilter(filters.BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
         """
         Работает таким образом, что если не указана конкретная игра, то
-        сортировка происходит по максимальному рейтингу из всех игр тренера.
+        сортировка происходит по максимальному/минимальному полю из всех игр тренера.
         """
-        qs = User.objects.annotate(
-            rating=Max('teachers_game__rating')
-        )
         game = request.query_params.get('game')
-        if game:
-            qs = qs.filter(
+        queryset = User.objects.filter(
+            position=positions.TEACHER_CODE
+        ).prefetch_related(
+            'teachers_game', 'teachers_game__game'
+        )
+
+        if not game:
+            queryset = queryset.annotate(
+                rating=Max('teachers_game__rating')
+            )
+        else:
+            queryset = queryset.filter(
                 teachers_game__game__name=game
             ).annotate(
                 rating=Case(
                     When(teachers_game__game__name=game, then='teachers_game__rating'),
                 )
             )
-        return qs
+        return queryset
 
 
-class TeacherFilter(django_filters.FilterSet):
+class TeacherFilterSet(django_filters.FilterSet):
     game = django_filters.CharFilter(field_name='games_taught__name', lookup_expr='exact')
 
     class Meta:
         model = User
         fields = ('game',)
-
-
