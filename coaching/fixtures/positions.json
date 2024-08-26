@@ -3,42 +3,35 @@
     "model": "coaching.status",
     "pk": "accepted",
     "fields": {
-      "name": "Принята"
+      "name": "РџСЂРёРЅСЏС‚Р°"
     }
   },
   {
     "model": "coaching.status",
     "pk": "approved",
     "fields": {
-      "name": "Одобрена"
+      "name": "РћРґРѕР±СЂРµРЅР°"
     }
   },
   {
     "model": "coaching.status",
     "pk": "processing",
     "fields": {
-      "name": "В обработке"
+      "name": "Р’ РѕР±СЂР°Р±РѕС‚РєРµ"
     }
   },
   {
     "model": "coaching.status",
     "pk": "rejected",
     "fields": {
-      "name": "Отклонено"
+      "name": "РћС‚РєР»РѕРЅРµРЅР°"
     }
   },
   {
     "model": "coaching.status",
     "pk": "waiting",
     "fields": {
-      "name": "В ожидании"
-    }
-  },
-  {
-    "model": "coaching.status",
-    "pk": "Отклонено",
-    "fields": {
-      "name": "rejected"
+      "name": "Р’ РѕР¶РёРґР°РЅРёРё"
     }
   }
 ]

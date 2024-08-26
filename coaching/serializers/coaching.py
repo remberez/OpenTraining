@@ -48,6 +48,18 @@ class UserCoachingSerializer(serializers.ModelSerializer):
             'learner_coaching',
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = kwargs['context'].get('request')
+        include_teacher = request.query_params.get('include_teacher', 'true') in ['true', 'True', 1]
+        include_learner = request.query_params.get('include_learner', 'true') in ['true', 'True', 1]
+
+        if not include_teacher:
+            self.fields.pop('teacher_coaching')
+        if not include_learner:
+            self.fields.pop('learner_coaching')
+
 
 class StartCoachingSerializer(serializers.ModelSerializer):
     receiver = serializers.CharField(write_only=True)

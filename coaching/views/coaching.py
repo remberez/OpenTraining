@@ -5,7 +5,7 @@ from common.views.mixins import ListRetrieveViewSet, CreateViewSet
 from coaching.models.coaching import Coaching
 from coaching.serializers import coaching
 from rest_framework import status
-from drf_spectacular.utils import extend_schema_view, extend_schema
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from common.permissions.user import IsUserAccount, IsAdmin
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
@@ -20,6 +20,16 @@ User = get_user_model()
     list=extend_schema(
         summary='Список всех наставничеств',
         tags=['Тренерство'],
+        parameters=[
+            OpenApiParameter(
+                'include_teacher', type=bool, required=False,
+                description='Если false, то не будет включено поле с преподаваемыми играми.',
+            ),
+            OpenApiParameter(
+                'include_learner', type=bool, required=False,
+                description='По аналогии.'
+            ),
+        ]
     ),
     retrieve=extend_schema(
         summary='Детальная информация о наставничестве',
@@ -67,7 +77,6 @@ class UserCoachingView(ListRetrieveViewSet):
 )
 class CoachingView(CreateViewSet):
     queryset = Coaching.objects.all()
-    http_method_names = ('post',)
 
     multi_serializer_class = {
         'create': coaching.StartCoachingSerializer,

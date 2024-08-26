@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-
 from users.constants import positions
 from rest_framework import filters
 import django_filters
@@ -19,11 +18,13 @@ class CoachingFilter(filters.BaseFilterBackend):
 
 class CoachingSearchFilter(django_filters.FilterSet):
     search = django_filters.CharFilter(method='search_filter')
+    game = django_filters.CharFilter(method='game_filter')
 
     class Meta:
         model = User
         fields = (
             'search',
+            'game',
         )
 
     def search_filter(self, queryset, name, value):
@@ -34,4 +35,10 @@ class CoachingSearchFilter(django_filters.FilterSet):
             Q(learner_coaching__teacher__username__icontains=value) |
             Q(learner_coaching__game__game__name__icontains=value) |
             Q(teacher_coaching__game__game__name__icontains=value)
+        )
+
+    def game_filter(self, queryset, name, value):
+        return queryset.filter(
+            Q(learner_coaching__game__game__name__exact=value) |
+            Q(teacher_coaching__game__game__name__exact=value)
         )
