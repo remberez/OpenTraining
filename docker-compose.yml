@@ -1,17 +1,29 @@
 networks:
   dev:
 services:
-  nginx:
-    image: nginx:stable-alpine
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    volumes:
-      - './nginx.conf:/etc/nginx/nginx.conf'
-    networks:
-      - dev
+#  nginx:
+#    image: nginx:stable-alpine
+#    ports:
+#      - "80:80"
+#    depends_on:
+#      - backend
+#    volumes:
+#      - './nginx.conf:/etc/nginx/nginx.conf'
+#    networks:
+#      - dev
   backend:
     build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
     networks:
       - dev
+  database:
+    image: postgres:14.5
+    networks:
+      - dev
+    environment:
+      - POSTGRES_DB=OpenTraining
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
